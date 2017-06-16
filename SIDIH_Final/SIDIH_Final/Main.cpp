@@ -49,6 +49,7 @@ int main() {
 	std::stringstream consoleOutput;
 	std::string path, filename;
 
+	/*
 	while (true) {
 
 		int option = menu({
@@ -126,28 +127,21 @@ int main() {
 			break;
 		}
 	}
+	*/
 
 
-
-
-
-
-	/*
-	//my_automata.loadFromFile("C:/Users/Utilizador/Source/Repos/Example.aut", consoleOutput);
-	my_automata.loadFromFile("C:/Users/Chi/Source/Repos/Example.aut", std::cout);
-
-	//my_automata.printAutomataInfo(consoleOutput);
-
-	//my_automata.trim(std::cout);
-
-	my_automata.printAutomataInfo(consoleOutput);
+	my_automata.loadFromFile("C:/Users/Utilizador/Source/Repos/Example2.aut", consoleOutput);
+	//my_automata.loadFromFile("C:/Users/Chi/Source/Repos/Example.aut", std::cout);
 
 	my_automata.toDFA(consoleOutput);
 
-	my_automata.printAutomataInfo(consoleOutput);
+	my_automata.minimize(consoleOutput);
+
+	//my_automata.printAutomataInfo(consoleOutput);
 
 	std::cout << consoleOutput.str();
 
-	*/
+	std::cin.get();
+
 	return 0;
 }

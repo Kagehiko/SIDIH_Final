@@ -41,6 +41,27 @@ bool doesStringExistInVector(std::vector<std::string> str_vector, std::string st
 
 
 
+//Returns C(n,2), i.e. all possible combinations with size = 2 of {0,...,n-1} 
+std::vector<std::pair<int, int>> getStatePairs(size_t n) {
+	std::string bitmask(2, 1);
+	bitmask.resize(n, 0);
+
+	std::vector<int> single_pair;
+	std::vector<std::pair<int, int>> state_pairs;
+
+	do {
+		for (int i = 0; i < n; i++) {
+			if (bitmask[i]) single_pair.push_back(i);
+		}
+		state_pairs.push_back( {single_pair.at(0),single_pair.at(1)} );
+		single_pair.clear();
+	} while (std::prev_permutation(bitmask.begin(), bitmask.end()));
+
+	return state_pairs;
+}
+
+
+
 //Public methods
 
 //Loads file in a given path and calls the parser
@@ -418,7 +439,7 @@ bool Automata::isDFA(std::ostream& console_output) {
 
 	//Search for the epsilon transition
 	if (std::find(events.begin(), events.end(), "") != events.end()) {
-		console_output << "The automata is non-deterministic";
+		console_output << "The automata is non-deterministic" << std::endl;
 		return false;
 	}
 
@@ -427,14 +448,14 @@ bool Automata::isDFA(std::ostream& console_output) {
 		for (int k = 0; k != events.size(); k++) {
 			if (transitions.count({ i,events.at(k) }) == 1) {
 				if (transitions.at({ i,events.at(k) }).size() > 1) {
-					console_output << "The automata is non-deterministic";
+					console_output << "The automata is non-deterministic" << std::endl;
 					return false;
 				}
 			}
 		}
 	}
 
-	console_output << "The automata is deterministic";
+	console_output << "The automata is deterministic" << std::endl;
 	return true;
 }
 
@@ -497,6 +518,7 @@ bool Automata::saveToFile(std::string path, std::ostream& console_output) {
 	file.close();
 
 	console_output << "Save successful" << std::endl;
+	return true;
 }
 
 
@@ -508,6 +530,104 @@ bool Automata::automataHasData(std::ostream& console_output) {
 		console_output << "No data has been loaded" << std::endl;
 		return false;
 	}
+	return true;
+}
+
+
+
+//Returns false if minimization is impossible
+bool Automata::minimize(std::ostream& console_output) {
+
+	if (automataHasData(console_output) == false) {
+		return false;
+	}
+	else if(isDFA() == false){
+		console_output << "Cannot minimize non-DFA" << std::endl;
+		return false;
+	}
+	
+	
+
+	// Apply Myhill–Nerode theorem
+	
+	//Here, marked != final state. Marked means it's marked on the "table" of state pairs with an "X".
+
+	//1) Remove non accessibld states
+	removeNonAccessibleStates();
+
+	//2) Create state pairs
+	std::vector<std::pair<int, int>> non_marked_state_pairs, marked_state_pairs;
+	non_marked_state_pairs = getStatePairs(state_names.size());
+
+	//3) Mark state pairs (p,q) where p is a final state and q is not, or vice-versa
+	for (std::vector<std::pair<int, int>>::iterator it = non_marked_state_pairs.begin(); it != non_marked_state_pairs.end();) {
+		
+		//If "p" is marked (here it means final state) but "q" is not, then mark the state pair (p,q). Same for vice-versa case
+		if (   std::find(marked_states.begin(), marked_states.end(), (*it).first)  != marked_states.end() 
+			&& std::find(marked_states.begin(), marked_states.end(), (*it).second) == marked_states.end() ){
+
+			marked_state_pairs.push_back(*it);
+			it = non_marked_state_pairs.erase(it);
+		}
+		else if (   std::find(marked_states.begin(), marked_states.end(), (*it).second) != marked_states.end()
+			     && std::find(marked_states.begin(), marked_states.end(), (*it).first)  == marked_states.end() ){
+
+			marked_state_pairs.push_back(*it);
+			it = non_marked_state_pairs.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+
+	
+	//4)
+	bool new_pairs_were_marked = false, iterator_was_deleted = false;
+	do {
+
+		new_pairs_were_marked = false;
+
+		//Go through all non-marked pairs
+		for (std::vector<std::pair<int, int>>::iterator it = non_marked_state_pairs.begin(); it != non_marked_state_pairs.end();) {
+			//For each event "a"
+			for (auto a = 0; a != events.size();a++) {
+				//If the event is enabled in both states, mark (p,q) if they both lead to a marked pair
+				if (transitions.count({(*it).first,events.at(a)}) == 1 && transitions.count({(*it).second,events.at(a) }) == 1) {
+					std::pair<int, int> state_pair;
+					state_pair = std::make_pair( transitions.at({(*it).first,events.at(a)}).at(0) , transitions.at({(*it).second,events.at(a)}).at(0) );
+
+					if (state_pair.first > state_pair.second) {
+						state_pair = std::make_pair(state_pair.second, state_pair.first);
+					}
+
+					if (std::find(marked_state_pairs.begin(), marked_state_pairs.end(), state_pair) != marked_state_pairs.end()) {
+						//State pair (f(p,a) , f(q,a)) is marked, so (p,q) must be marked 
+						marked_state_pairs.push_back(*it);
+						it = non_marked_state_pairs.erase(it);
+						new_pairs_were_marked = true;
+						iterator_was_deleted = true;
+						break;
+					}
+				}
+				else if(transitions.count({ (*it).first,events.at(a) }) != 0 && transitions.count({ (*it).second,events.at(a) }) != 0){
+					marked_state_pairs.push_back(*it);
+					it = non_marked_state_pairs.erase(it);
+					new_pairs_were_marked = true;
+					iterator_was_deleted = true;
+					break;
+				}
+			}
+			if (iterator_was_deleted == true) {
+				iterator_was_deleted = false;
+			}
+			else {
+				++it;
+			}
+			
+		}
+	} while (new_pairs_were_marked);
+
+
 	return true;
 }
 

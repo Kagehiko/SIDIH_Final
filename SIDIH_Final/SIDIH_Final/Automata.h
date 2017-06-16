@@ -18,6 +18,7 @@ public:
 	bool isDFA(std::ostream& console_output = std::stringstream());
 	bool saveToFile(std::string path, std::ostream& console_output);
 	bool automataHasData(std::ostream& console_output = std::stringstream());
+	bool minimize(std::ostream& console_output = std::stringstream());
 
 private:
 	bool parseStream(std::istream& input_stream, std::ostream& console_output = std::stringstream());

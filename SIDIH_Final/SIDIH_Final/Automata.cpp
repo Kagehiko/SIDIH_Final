@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iterator>
 #include <vector>
+#include <set>
 #include "Automata.h"
 
 
@@ -60,6 +61,21 @@ std::vector<std::pair<int, int>> getStatePairs(size_t n) {
 	return state_pairs;
 }
 
+
+
+//Returns all indexes of pairs containing the given item
+std::vector<int> findItemIndexInPairVector(std::vector<std::pair<int,int>> vect, int item) {
+
+	std::vector<int> indexes;
+
+	for (auto i = 0; i != vect.size(); i++) {
+		if (vect.at(i).first == item || vect.at(i).second == item) {
+			indexes.push_back(i);
+		}
+	}
+
+	return indexes;
+}
 
 
 //Public methods
@@ -626,6 +642,112 @@ bool Automata::minimize(std::ostream& console_output) {
 			
 		}
 	} while (new_pairs_were_marked);
+
+
+	//5) Concatenate state pairs that have a state in common
+	
+	std::vector<std::vector<int>> new_DFA_states;
+	std::vector<int> old_DFA_states;
+
+	for (auto i = 0; i != state_names.size(); i++) {
+		old_DFA_states.push_back(i);
+	}
+
+	while (non_marked_state_pairs.size() != 0) {
+		//Find if the first and second elements of the state pair at index 0 are repeated in other state pairs
+		std::vector<int> state_pairs_with_first, state_pairs_with_second;
+		state_pairs_with_first = findItemIndexInPairVector(non_marked_state_pairs, non_marked_state_pairs.at(0).first);
+		state_pairs_with_second = findItemIndexInPairVector(non_marked_state_pairs, non_marked_state_pairs.at(0).second);
+
+		//If both states only appear once in all of the state pairs, then this pair is unique and there's no need to concatenate pairs.
+		if (state_pairs_with_first.size() == 1 && state_pairs_with_second.size() == 1) {
+			std::vector<int> states;
+			
+			states.push_back(non_marked_state_pairs.at(0).first);
+			states.push_back(non_marked_state_pairs.at(0).second);
+			new_DFA_states.push_back(states);
+
+			//Delete the equivalent states from the old states vector
+			old_DFA_states.erase(std::remove(old_DFA_states.begin(), old_DFA_states.end(), non_marked_state_pairs.at(0).first), old_DFA_states.end());
+			old_DFA_states.erase(std::remove(old_DFA_states.begin(), old_DFA_states.end(), non_marked_state_pairs.at(0).second), old_DFA_states.end());
+			
+			//Delete state pair
+			non_marked_state_pairs.erase(non_marked_state_pairs.begin());
+		}
+		else {
+			std::vector<int> states;
+
+			//Pushback all states of all equivalent pairs
+			for (auto i = 0; i != state_pairs_with_first.size(); i++) {
+				states.push_back(non_marked_state_pairs.at(state_pairs_with_first.at(i)).first);
+				states.push_back(non_marked_state_pairs.at(state_pairs_with_first.at(i)).second);
+			}
+
+			for (auto i = 0; i != state_pairs_with_second.size(); i++) {
+				states.push_back(non_marked_state_pairs.at(state_pairs_with_second.at(i)).first);
+				states.push_back(non_marked_state_pairs.at(state_pairs_with_second.at(i)).second);
+			}
+
+			//Sort and delete duplicates
+			std::sort(states.begin(), states.end());
+			states.erase(std::unique(states.begin(), states.end()), states.end());
+
+			//Delete the equivalent states from the old states vector
+			for (auto i = 0; i != states.size(); i++) {
+				old_DFA_states.erase(std::remove(old_DFA_states.begin(), old_DFA_states.end(), states.at(i)), old_DFA_states.end());
+			}
+
+			new_DFA_states.push_back(states);
+
+			//Get all indexes to delete
+			std::vector<int> indexes_to_delete;
+			for (auto i = 0; i != state_pairs_with_first.size(); i++) {
+				indexes_to_delete.push_back(state_pairs_with_first.at(i));
+			}
+			for (auto i = 0; i != state_pairs_with_second.size(); i++) {
+				indexes_to_delete.push_back(state_pairs_with_second.at(i));
+			}
+			
+			//Sort and delete duplicate indexes
+			std::sort(indexes_to_delete.begin(), indexes_to_delete.end());
+			indexes_to_delete.erase(std::unique(indexes_to_delete.begin(), indexes_to_delete.end()), indexes_to_delete.end());
+
+			//Reverse iterate through indexes to delete, and delete the already used state pairs
+			std::vector<int>::reverse_iterator rit = indexes_to_delete.rbegin();
+			for (; rit != indexes_to_delete.rend(); ++rit) {
+				non_marked_state_pairs.erase(non_marked_state_pairs.begin() + 3);
+			}
+		}
+	}
+	
+	//Copy all remaining old states to the new DFA states.
+	for (auto i = 0; i != old_DFA_states.size(); i++) {
+		std::vector<int> single_state;
+		single_state.push_back(old_DFA_states.at(i));
+		new_DFA_states.push_back(single_state);
+	}
+
+	std::stringstream newAutomataInfo;
+
+	newAutomataInfo << "STATES\r\n";
+
+	for (auto i = 0; i != new_DFA_states.size(); i++) {
+		newAutomataInfo << printDFAState(new_DFA_states, i) << "\r\n";
+	}
+		
+	newAutomataInfo << "EVENTS\r\n";
+
+	for (auto i = 0; i != events.size(); i++) {
+		newAutomataInfo << events.at(i) << "\r\n";
+	}
+
+
+
+
+
+
+	std::cout << newAutomataInfo.str();
+
 
 
 	return true;

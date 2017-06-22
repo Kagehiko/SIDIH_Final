@@ -63,6 +63,18 @@ std::vector<std::pair<int, int>> getStatePairs(size_t n) {
 
 
 
+//Returns index of the DFA state that contains the given sub-state (item)
+int findIndexOfDFAStateWithItem(std::vector<std::vector<int>> DFA_states, int item) {
+	
+	for (auto i = 0; i != DFA_states.size(); i++) {
+		for (auto j = 0; j != DFA_states.at(i).size(); j++) {
+			if(DFA_states.at(i).at(j) == item) {
+				return i;
+			}
+		}
+	}
+}
+
 //Returns all indexes of pairs containing the given item
 std::vector<int> findItemIndexInPairVector(std::vector<std::pair<int,int>> vect, int item) {
 
@@ -311,7 +323,7 @@ void Automata::clearAutomata(std::ostream& console_output) {
 void Automata::toDFA(std::ostream& console_output) {
 
 	if (isDFA()) {
-		console_output << "Automata is already deterministic";
+		console_output << "Automata is already deterministic" << std::endl;
 		return;
 	}
 
@@ -653,6 +665,7 @@ bool Automata::minimize(std::ostream& console_output) {
 		old_DFA_states.push_back(i);
 	}
 
+
 	while (non_marked_state_pairs.size() != 0) {
 		//Find if the first and second elements of the state pair at index 0 are repeated in other state pairs
 		std::vector<int> state_pairs_with_first, state_pairs_with_second;
@@ -715,7 +728,7 @@ bool Automata::minimize(std::ostream& console_output) {
 			//Reverse iterate through indexes to delete, and delete the already used state pairs
 			std::vector<int>::reverse_iterator rit = indexes_to_delete.rbegin();
 			for (; rit != indexes_to_delete.rend(); ++rit) {
-				non_marked_state_pairs.erase(non_marked_state_pairs.begin() + 3);
+				non_marked_state_pairs.erase(non_marked_state_pairs.begin() + (*rit));
 			}
 		}
 	}
@@ -734,21 +747,44 @@ bool Automata::minimize(std::ostream& console_output) {
 	for (auto i = 0; i != new_DFA_states.size(); i++) {
 		newAutomataInfo << printDFAState(new_DFA_states, i) << "\r\n";
 	}
-		
+
 	newAutomataInfo << "EVENTS\r\n";
 
 	for (auto i = 0; i != events.size(); i++) {
 		newAutomataInfo << events.at(i) << "\r\n";
 	}
 
+	newAutomataInfo << "TRANSITIONS\r\n";
 
+	//Go through all of the minimized DFA states and events
+	for (auto i = 0; i != new_DFA_states.size(); i++) {
+		for (auto j = 0; j != events.size(); j++) {
+			//Pick random "p" sub-state (in this case, the first one) inside DFA state and check for transitions
+			if (transitions.count({new_DFA_states.at(i).at(0), events.at(j)}) == 1) {
+				//DFA states jumps to the DFA state which contains f(p,a), where "a" is events.at(j)
+				//Since this is a DFA, transitions[p,a] only has 1 state, hence the final ".at(0)"
+				newAutomataInfo << printDFAState(new_DFA_states, i) << ";" << events.at(j) << ";" 
+								<< printDFAState(new_DFA_states, 
+												 findIndexOfDFAStateWithItem(new_DFA_states, transitions.at({new_DFA_states.at(i).at(0), events.at(j)}).at(0)))
+								<< "\r\n";
+			}
+		}
+	}
 
+	newAutomataInfo << "INITIAL\r\n";
 
+	newAutomataInfo << printDFAState(new_DFA_states, findIndexOfDFAStateWithItem(new_DFA_states, initial_state)) << "\r\n";
 
+	newAutomataInfo << "MARKED\r\n";
 
-	std::cout << newAutomataInfo.str();
+	for (auto i = 0; i != marked_states.size(); i++) {
+		newAutomataInfo << printDFAState(new_DFA_states, findIndexOfDFAStateWithItem(new_DFA_states, marked_states.at(i))) << "\r\n";
+	}
 
+	clearAutomata();
+	parseStream(newAutomataInfo);
 
+	console_output << "Minimization successful" << std::endl;
 
 	return true;
 }
@@ -832,6 +868,7 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& console_out
 			break;
 
 		case eTRANSITIONS:
+		//Create local scope to allow variable declaration (curly brackets)
 		{
 			int first_state, event_pos, second_state;
 			std::string event;
@@ -890,19 +927,24 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& console_out
 			}
 			else {
 				console_output << "Error: Initial state " << line << " does not match any known states (line " << line_number << ")" << std::endl;
-
 				clearAutomata();
 				return false;
 			}
 			break;
 
 		case eMARKED:
-			//Keep "pos" scope inside these curly brackets
 		{
-			int pos = 0;
-			if (doesStringExistInVector(state_names, line, &pos)) {
-				marked_states.push_back(pos);
-				got_marker_state = true;
+			int state_index = 0;
+			if (doesStringExistInVector(state_names, line, &state_index)) {
+				//Check for repeated marked states
+				if (std::find(marked_states.begin(), marked_states.end(), state_index) != marked_states.end()) {
+					console_output << "Warning: Repeated marked states (line " << line_number << ")" << std::endl;
+				}
+				else {
+					marked_states.push_back(state_index);
+					got_marker_state = true;
+				}
+				
 			}
 			else {
 				console_output << "Error: Marked state " << line << " does not match any known states (line " << line_number << ")" << std::endl;

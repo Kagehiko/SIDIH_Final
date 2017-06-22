@@ -133,11 +133,9 @@ int main() {
 	my_automata.loadFromFile("C:/Users/Utilizador/Source/Repos/Example2.aut", consoleOutput);
 	//my_automata.loadFromFile("C:/Users/Chi/Source/Repos/Example.aut", std::cout);
 
-	my_automata.toDFA(consoleOutput);
-
 	my_automata.minimize(consoleOutput);
 
-	//my_automata.printAutomataInfo(consoleOutput);
+	my_automata.printAutomataInfo(consoleOutput);
 
 	std::cout << consoleOutput.str();
 

@@ -9,6 +9,14 @@
 #include "Automata.h"
 
 
+void getSyncProductTransitions(std::vector<std::string> all_events,
+	std::map<std::pair<int, std::string>, std::vector<int>> A_transitions,
+	std::map<std::pair<int, std::string>, std::vector<int>> B_transitions,
+	std::vector<std::pair<int, int>>& result_states,
+	std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>>& result_transitions,
+	std::pair <int, int> state_to_check);
+
+
 
 //Helper functions
 
@@ -790,6 +798,108 @@ bool Automata::minimize(std::ostream& console_output) {
 }
 
 
+
+//Operator overload for DFA synchronous product
+Automata Automata::operator*(const Automata& b) {
+	Automata result, b_copy = b;
+
+	//Only accep DFAs
+	if ((this->isDFA() != true) || ( (b_copy).isDFA() != true) ) {
+		result.clearAutomata();
+		return result;
+	}
+
+	std::vector<std::pair<int, int>> result_states;
+	std::pair <int, int> result_initial_state;
+	std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>> result_transitions;
+
+	result_initial_state = std::make_pair(this->initial_state, b.initial_state);
+
+
+	getSyncProductTransitions(this->events, 
+							  this->transitions,
+							  b.transitions,
+							  result_states,
+							  result_transitions,
+							  result_initial_state);
+
+	std::stringstream newAutomataInfo;
+
+	newAutomataInfo << "STATES\r\n";
+
+	for (auto i = 0; i != result_states.size(); i++) {
+		newAutomataInfo << "(" << this->state_names.at(result_states.at(i).first) << "_" << b.state_names.at(result_states.at(i).second) << ")\r\n";
+	}
+
+	newAutomataInfo << "EVENTS\r\n";
+
+	for (auto i = 0; i != this->events.size(); i++) {
+		newAutomataInfo << this->events.at(i) << "\r\n";
+	}
+
+	newAutomataInfo << "TRANSITIONS\r\n";
+
+	for (auto i = 0; i != result_states.size(); i++) {
+		for(auto j = 0; j != this->events.size(); j++) {
+			if (result_transitions.count({ result_states.at(i), this->events.at(j) }) == 1) {
+				newAutomataInfo << "(" << this->state_names.at(result_states.at(i).first) << "_" << b.state_names.at(result_states.at(i).second) << ");";
+				newAutomataInfo << this->events.at(j) << ";(";
+				newAutomataInfo << this->state_names.at(result_transitions.at({ result_states.at(i), this->events.at(j) }).first) << "_";
+				newAutomataInfo << b.state_names.at(result_transitions.at({ result_states.at(i), this->events.at(j) }).second) << ")\r\n";
+			}
+		}
+	}
+
+	newAutomataInfo << "INITIAL\r\n";
+
+	newAutomataInfo << "(" << this->state_names.at(result_initial_state.first) << "_" << b.state_names.at(result_initial_state.second) << ")\r\n";
+
+	newAutomataInfo << "MARKED\r\n";
+
+	for (auto i = 0; i != result_states.size(); i++) {
+		//Try to find the first and second state in either marked states of the original Automatas
+		if (std::find(this->marked_states.begin(), this->marked_states.end(), result_states.at(i).first) != this->marked_states.end()) {
+			if (std::find(b.marked_states.begin(), b.marked_states.end(), result_states.at(i).second) != b.marked_states.end()) {
+				newAutomataInfo << "(" << this->state_names.at(result_states.at(i).first) << "_" << b.state_names.at(result_states.at(i).second) << ")\r\n";
+			}
+		}
+	}
+
+	result.parseStream(newAutomataInfo);
+
+	return result;
+}
+
+void getSyncProductTransitions(std::vector<std::string> all_events,
+							   std::map<std::pair<int, std::string>, std::vector<int>> A_transitions,
+							   std::map<std::pair<int, std::string>, std::vector<int>> B_transitions,
+							   std::vector<std::pair<int, int>>& result_states,
+							   std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>>& result_transitions,
+							   std::pair <int, int> state_to_check) {
+
+	result_states.push_back(state_to_check);
+
+	for (auto i = 0; i != all_events.size(); i++) {
+		if (A_transitions.count({state_to_check.first, all_events.at(i)}) == 1 && B_transitions.count({state_to_check.second, all_events.at(i)}) == 1) {
+			
+			std::pair <int, int> new_state;
+			new_state = std::make_pair(A_transitions.at({ state_to_check.first, all_events.at(i) }).at(0), B_transitions.at({ state_to_check.second, all_events.at(i) }).at(0));
+
+			//Store transition
+			result_transitions[{state_to_check, all_events.at(i) }] = new_state;
+
+			//If this new state is really new, then recursively find all of its transitions. Otherwise we already know its transitions.
+			if (std::find(result_states.begin(), result_states.end(), new_state) == result_states.end()) {
+				getSyncProductTransitions(all_events,
+					A_transitions,
+					B_transitions,
+					result_states,
+					result_transitions,
+					new_state);
+			}
+		}
+	}
+}
 
 //Private methods
 

@@ -45,7 +45,7 @@ int menu(std::vector<std::string> options) {
 
 int main() {
 
-	Automata my_automata;
+	Automata my_automata1, my_automata2;
 	std::stringstream consoleOutput;
 	std::string path, filename;
 
@@ -130,14 +130,20 @@ int main() {
 	*/
 
 
-	my_automata.loadFromFile("C:/Users/Utilizador/Source/Repos/Example2.aut", consoleOutput);
-	//my_automata.loadFromFile("C:/Users/Chi/Source/Repos/Example.aut", std::cout);
+	my_automata1.loadFromFile("C:/Users/Chi/Source/Repos/P1.aut", std::cout);
+	my_automata2.loadFromFile("C:/Users/Chi/Source/Repos/P2.aut", std::cout);
 
-	my_automata.minimize(consoleOutput);
 
-	my_automata.printAutomataInfo(consoleOutput);
 
-	std::cout << consoleOutput.str();
+	//my_automata1.printAutomataInfo(std::cout);
+
+	//my_automata2.printAutomataInfo(std::cout);
+
+	Automata result;
+
+	result = my_automata1 * my_automata2;
+
+	result.printAutomataInfo(std::cout);
 
 	std::cin.get();
 

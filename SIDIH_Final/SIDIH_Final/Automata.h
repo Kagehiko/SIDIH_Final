@@ -20,6 +20,8 @@ public:
 	bool automataHasData(std::ostream& console_output = std::stringstream());
 	bool minimize(std::ostream& console_output = std::stringstream());
 
+	Automata operator*(const Automata& b);
+
 private:
 	bool parseStream(std::istream& input_stream, std::ostream& console_output = std::stringstream());
 	void goThroughAccessibleStates(std::vector<bool>& accessible_states, int state);
@@ -35,5 +37,5 @@ private:
 	int initial_state;
 	std::vector<int> marked_states;
 	std::vector<std::string> events;
-	std::map<std::pair<int, std::string>, std::vector<int> > transitions;
+	std::map<std::pair<int, std::string>, std::vector<int>> transitions;
 };

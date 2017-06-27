@@ -21,6 +21,7 @@ public:
 	bool minimize(std::ostream& console_output = std::stringstream());
 
 	Automata operator*(const Automata& b);
+	Automata operator+(const Automata& b);
 
 private:
 	bool parseStream(std::istream& input_stream, std::ostream& console_output = std::stringstream());

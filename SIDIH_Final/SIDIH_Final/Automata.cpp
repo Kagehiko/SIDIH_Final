@@ -9,14 +9,6 @@
 #include "Automata.h"
 
 
-void getSyncProductTransitions(std::vector<std::string> all_events,
-	std::map<std::pair<int, std::string>, std::vector<int>> A_transitions,
-	std::map<std::pair<int, std::string>, std::vector<int>> B_transitions,
-	std::vector<std::pair<int, int>>& result_states,
-	std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>>& result_transitions,
-	std::pair <int, int> state_to_check);
-
-
 
 //Helper functions
 
@@ -73,14 +65,15 @@ std::vector<std::pair<int, int>> getStatePairs(size_t n) {
 
 //Returns index of the DFA state that contains the given sub-state (item)
 int findIndexOfDFAStateWithItem(std::vector<std::vector<int>> DFA_states, int item) {
-	
-	for (auto i = 0; i != DFA_states.size(); i++) {
+	auto i=0;
+	for (i = 0; i != DFA_states.size(); i++) {
 		for (auto j = 0; j != DFA_states.at(i).size(); j++) {
 			if(DFA_states.at(i).at(j) == item) {
 				return i;
 			}
 		}
 	}
+	return i;
 }
 
 //Returns all indexes of pairs containing the given item
@@ -96,6 +89,41 @@ std::vector<int> findItemIndexInPairVector(std::vector<std::pair<int,int>> vect,
 
 	return indexes;
 }
+
+
+
+//Recursive Sync product function to get all transitions. See overloaded operator* method
+void getSyncProductTransitions(std::vector<std::string> all_events,
+	std::map<std::pair<int, std::string>, std::vector<int>> A_transitions,
+	std::map<std::pair<int, std::string>, std::vector<int>> B_transitions,
+	std::vector<std::pair<int, int>>& result_states,
+	std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>>& result_transitions,
+	std::pair <int, int> state_to_check) {
+
+	result_states.push_back(state_to_check);
+
+	for (auto i = 0; i != all_events.size(); i++) {
+		if (A_transitions.count({ state_to_check.first, all_events.at(i) }) == 1 && B_transitions.count({ state_to_check.second, all_events.at(i) }) == 1) {
+
+			std::pair <int, int> new_state;
+			new_state = std::make_pair(A_transitions.at({ state_to_check.first, all_events.at(i) }).at(0), B_transitions.at({ state_to_check.second, all_events.at(i) }).at(0));
+
+			//Store transition
+			result_transitions[{state_to_check, all_events.at(i) }] = new_state;
+
+			//If this new state is really new, then recursively find all of its transitions. Otherwise we already know its transitions.
+			if (std::find(result_states.begin(), result_states.end(), new_state) == result_states.end()) {
+				getSyncProductTransitions(all_events,
+					A_transitions,
+					B_transitions,
+					result_states,
+					result_transitions,
+					new_state);
+			}
+		}
+	}
+}
+
 
 
 //Public methods
@@ -870,35 +898,13 @@ Automata Automata::operator*(const Automata& b) {
 	return result;
 }
 
-void getSyncProductTransitions(std::vector<std::string> all_events,
-							   std::map<std::pair<int, std::string>, std::vector<int>> A_transitions,
-							   std::map<std::pair<int, std::string>, std::vector<int>> B_transitions,
-							   std::vector<std::pair<int, int>>& result_states,
-							   std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>>& result_transitions,
-							   std::pair <int, int> state_to_check) {
 
-	result_states.push_back(state_to_check);
 
-	for (auto i = 0; i != all_events.size(); i++) {
-		if (A_transitions.count({state_to_check.first, all_events.at(i)}) == 1 && B_transitions.count({state_to_check.second, all_events.at(i)}) == 1) {
-			
-			std::pair <int, int> new_state;
-			new_state = std::make_pair(A_transitions.at({ state_to_check.first, all_events.at(i) }).at(0), B_transitions.at({ state_to_check.second, all_events.at(i) }).at(0));
+//Operator overload for DFA async product (i.e. parallel)
+Automata Automata::operator+(const Automata& b) {
+	Automata result;
 
-			//Store transition
-			result_transitions[{state_to_check, all_events.at(i) }] = new_state;
-
-			//If this new state is really new, then recursively find all of its transitions. Otherwise we already know its transitions.
-			if (std::find(result_states.begin(), result_states.end(), new_state) == result_states.end()) {
-				getSyncProductTransitions(all_events,
-					A_transitions,
-					B_transitions,
-					result_states,
-					result_transitions,
-					new_state);
-			}
-		}
-	}
+	return result;
 }
 
 //Private methods

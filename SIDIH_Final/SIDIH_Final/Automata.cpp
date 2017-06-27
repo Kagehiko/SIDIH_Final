@@ -76,6 +76,8 @@ int findIndexOfDFAStateWithItem(std::vector<std::vector<int>> DFA_states, int it
 	return i;
 }
 
+
+
 //Returns all indexes of pairs containing the given item
 std::vector<int> findItemIndexInPairVector(std::vector<std::pair<int,int>> vect, int item) {
 
@@ -94,11 +96,11 @@ std::vector<int> findItemIndexInPairVector(std::vector<std::pair<int,int>> vect,
 
 //Recursive Sync product function to get all transitions. See overloaded operator* method
 void getSyncProductTransitions(std::vector<std::string> all_events,
-	std::map<std::pair<int, std::string>, std::vector<int>> A_transitions,
-	std::map<std::pair<int, std::string>, std::vector<int>> B_transitions,
-	std::vector<std::pair<int, int>>& result_states,
-	std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>>& result_transitions,
-	std::pair <int, int> state_to_check) {
+							   std::map<std::pair<int, std::string>, std::vector<int>> A_transitions,
+						   	   std::map<std::pair<int, std::string>, std::vector<int>> B_transitions,
+							   std::vector<std::pair<int, int>>& result_states,
+							   std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>>& result_transitions,
+							   std::pair <int, int> state_to_check) {
 
 	result_states.push_back(state_to_check);
 
@@ -122,6 +124,121 @@ void getSyncProductTransitions(std::vector<std::string> all_events,
 			}
 		}
 	}
+}
+
+
+
+//
+void getAsyncProductTransitions(std::vector<std::string> all_events,
+								std::vector<std::string> A_events,
+								std::vector<std::string> B_events,
+								std::map<std::pair<int, std::string>, std::vector<int>> A_transitions,
+								std::map<std::pair<int, std::string>, std::vector<int>> B_transitions,
+								std::vector<std::pair<int, int>>& result_states,
+								std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>>& result_transitions,
+								std::pair <int, int> state_to_check) {
+	
+	result_states.push_back(state_to_check);
+
+	bool new_state_was_created = false;
+	std::pair <int, int> new_state;
+
+	for (auto i = 0; i != all_events.size(); i++) {
+
+		//Same as the sync product
+		if (A_transitions.count({ state_to_check.first, all_events.at(i) }) == 1 && B_transitions.count({ state_to_check.second, all_events.at(i) }) == 1) {
+
+			new_state = std::make_pair(A_transitions.at({ state_to_check.first, all_events.at(i) }).at(0), B_transitions.at({ state_to_check.second, all_events.at(i) }).at(0));
+			new_state_was_created = true;
+
+		}
+		//Case where there is a transition for the first state but the event doesn't exist for the second automata
+		else if (A_transitions.count({ state_to_check.first, all_events.at(i) }) == 1 && (std::find(B_events.begin(), B_events.end(), all_events.at(i)) == B_events.end()) ) {
+
+			new_state = std::make_pair(A_transitions.at({ state_to_check.first, all_events.at(i) }).at(0), state_to_check.second);
+			new_state_was_created = true;
+		}
+		//Case where there is a transition for the second state but the event doesn't exist for the first automata
+		else if ((std::find(A_events.begin(), A_events.end(), all_events.at(i)) == A_events.end()) && B_transitions.count({ state_to_check.second, all_events.at(i) }) == 1) {
+			new_state = std::make_pair(state_to_check.first, B_transitions.at({ state_to_check.second, all_events.at(i) }).at(0));
+			new_state_was_created = true;
+		}
+
+
+		if (new_state_was_created == true) {
+			
+			new_state_was_created = false;
+			result_transitions[{state_to_check, all_events.at(i) }] = new_state;
+
+			if (std::find(result_states.begin(), result_states.end(), new_state) == result_states.end()) {
+				getAsyncProductTransitions(all_events,
+										   A_events,
+										   B_events,
+								  		   A_transitions,
+										   B_transitions,
+										   result_states,
+										   result_transitions,
+										   new_state);
+			}
+		}
+	}
+}
+
+
+
+//Prints automata info to be parsed. Made for the sync and async product functions
+std::stringstream printProductAutotamaInfo(std::vector<std::string> events,
+	std::vector<std::string> A_state_names,
+	std::vector<int> A_marked_states,
+	std::vector<std::string> B_state_names,
+	std::vector<int> B_marked_states,
+	std::vector<std::pair<int, int>> result_states,
+	std::pair <int, int> result_initial_state,
+	std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>> result_transitions) {
+
+	std::stringstream automata_info;
+
+	automata_info << "STATES\r\n";
+
+	for (auto i = 0; i != result_states.size(); i++) {
+		automata_info << "(" << A_state_names.at(result_states.at(i).first) << "_" << B_state_names.at(result_states.at(i).second) << ")\r\n";
+	}
+
+	automata_info << "EVENTS\r\n";
+
+	for (auto i = 0; i != events.size(); i++) {
+		automata_info << events.at(i) << "\r\n";
+	}
+
+	automata_info << "TRANSITIONS\r\n";
+
+	for (auto i = 0; i != result_states.size(); i++) {
+		for (auto j = 0; j != events.size(); j++) {
+			if (result_transitions.count({ result_states.at(i), events.at(j) }) == 1) {
+				automata_info << "(" << A_state_names.at(result_states.at(i).first) << "_" << B_state_names.at(result_states.at(i).second) << ");";
+				automata_info << events.at(j) << ";(";
+				automata_info << A_state_names.at(result_transitions.at({ result_states.at(i), events.at(j) }).first) << "_";
+				automata_info << B_state_names.at(result_transitions.at({ result_states.at(i), events.at(j) }).second) << ")\r\n";
+			}
+		}
+	}
+
+	automata_info << "INITIAL\r\n";
+
+	automata_info << "(" << A_state_names.at(result_initial_state.first) << "_" << B_state_names.at(result_initial_state.second) << ")\r\n";
+
+	automata_info << "MARKED\r\n";
+
+	for (auto i = 0; i != result_states.size(); i++) {
+		//Try to find the first and second state in either marked states of the original Automatas
+		if (std::find(A_marked_states.begin(), A_marked_states.end(), result_states.at(i).first) != A_marked_states.end()) {
+			if (std::find(B_marked_states.begin(), B_marked_states.end(), result_states.at(i).second) != B_marked_states.end()) {
+				automata_info << "(" << A_state_names.at(result_states.at(i).first) << "_" << B_state_names.at(result_states.at(i).second) << ")\r\n";
+			}
+		}
+	}
+
+	return automata_info;
 }
 
 
@@ -851,49 +968,18 @@ Automata Automata::operator*(const Automata& b) {
 							  result_transitions,
 							  result_initial_state);
 
-	std::stringstream newAutomataInfo;
+	std::stringstream automata_info;
 
-	newAutomataInfo << "STATES\r\n";
+	automata_info = printProductAutotamaInfo(this->events,
+											 this->state_names,
+											 this->marked_states,
+											 b.state_names,
+											 b.marked_states,
+											 result_states,
+											 result_initial_state,
+											 result_transitions);
 
-	for (auto i = 0; i != result_states.size(); i++) {
-		newAutomataInfo << "(" << this->state_names.at(result_states.at(i).first) << "_" << b.state_names.at(result_states.at(i).second) << ")\r\n";
-	}
-
-	newAutomataInfo << "EVENTS\r\n";
-
-	for (auto i = 0; i != this->events.size(); i++) {
-		newAutomataInfo << this->events.at(i) << "\r\n";
-	}
-
-	newAutomataInfo << "TRANSITIONS\r\n";
-
-	for (auto i = 0; i != result_states.size(); i++) {
-		for(auto j = 0; j != this->events.size(); j++) {
-			if (result_transitions.count({ result_states.at(i), this->events.at(j) }) == 1) {
-				newAutomataInfo << "(" << this->state_names.at(result_states.at(i).first) << "_" << b.state_names.at(result_states.at(i).second) << ");";
-				newAutomataInfo << this->events.at(j) << ";(";
-				newAutomataInfo << this->state_names.at(result_transitions.at({ result_states.at(i), this->events.at(j) }).first) << "_";
-				newAutomataInfo << b.state_names.at(result_transitions.at({ result_states.at(i), this->events.at(j) }).second) << ")\r\n";
-			}
-		}
-	}
-
-	newAutomataInfo << "INITIAL\r\n";
-
-	newAutomataInfo << "(" << this->state_names.at(result_initial_state.first) << "_" << b.state_names.at(result_initial_state.second) << ")\r\n";
-
-	newAutomataInfo << "MARKED\r\n";
-
-	for (auto i = 0; i != result_states.size(); i++) {
-		//Try to find the first and second state in either marked states of the original Automatas
-		if (std::find(this->marked_states.begin(), this->marked_states.end(), result_states.at(i).first) != this->marked_states.end()) {
-			if (std::find(b.marked_states.begin(), b.marked_states.end(), result_states.at(i).second) != b.marked_states.end()) {
-				newAutomataInfo << "(" << this->state_names.at(result_states.at(i).first) << "_" << b.state_names.at(result_states.at(i).second) << ")\r\n";
-			}
-		}
-	}
-
-	result.parseStream(newAutomataInfo);
+	result.parseStream(automata_info);
 
 	return result;
 }
@@ -902,10 +988,58 @@ Automata Automata::operator*(const Automata& b) {
 
 //Operator overload for DFA async product (i.e. parallel)
 Automata Automata::operator+(const Automata& b) {
-	Automata result;
+	Automata result, b_copy = b;
+
+	//Only accep DFAs
+	if ((this->isDFA() != true) || ((b_copy).isDFA() != true)) {
+		result.clearAutomata();
+		return result;
+	}
+
+	std::vector<std::pair<int, int>> result_states;
+	std::pair <int, int> result_initial_state;
+	std::map<std::pair<std::pair <int, int>, std::string>, std::pair <int, int>> result_transitions;
+
+	result_initial_state = std::make_pair(this->initial_state, b.initial_state);
+
+	std::vector<std::string> all_events;
+
+	all_events = this->events;
+
+	for (auto i = 0; i != b.events.size(); i++) {
+		all_events.push_back(b.events.at(i));
+	}
+	
+	//Remove repeated events
+	sort(all_events.begin(), all_events.end());
+	all_events.erase(unique(all_events.begin(), all_events.end()), all_events.end());
+
+	getAsyncProductTransitions(all_events,
+							   this->events,
+							   b.events,
+							   this->transitions,
+							   b.transitions,
+							   result_states,
+							   result_transitions,
+							   result_initial_state);
+
+	std::stringstream automata_info;
+
+	automata_info = printProductAutotamaInfo(all_events,
+									  		 this->state_names,
+											 this->marked_states,
+											 b.state_names,
+											 b.marked_states,
+											 result_states,
+											 result_initial_state,
+											 result_transitions);
+
+	result.parseStream(automata_info);
 
 	return result;
 }
+
+
 
 //Private methods
 

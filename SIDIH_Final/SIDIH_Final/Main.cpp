@@ -130,20 +130,20 @@ int main() {
 	*/
 
 
-	//my_automata1.loadFromFile("C:/Users/Chi/Source/Repos/P1.aut", std::cout);
-	//my_automata2.loadFromFile("C:/Users/Chi/Source/Repos/P2.aut", std::cout);
+	my_automata1.loadFromFile("C:/Users/Chi/Source/Repos/P1.aut", std::cout);
+	my_automata2.loadFromFile("C:/Users/Chi/Source/Repos/P2.aut", std::cout);
 
-	my_automata1.loadFromFile("C:/Users/Utilizador/Source/Repos/P1.aut", std::cout);
-	my_automata2.loadFromFile("C:/Users/Utilizador/Source/Repos/P2.aut", std::cout);
+	//my_automata1.loadFromFile("C:/Users/Utilizador/Source/Repos/P1.aut", std::cout);
+	//my_automata2.loadFromFile("C:/Users/Utilizador/Source/Repos/P2.aut", std::cout);
 
-	my_automata1.printAutomataInfo(std::cout);
-	my_automata2.printAutomataInfo(std::cout);
+	//my_automata1.printAutomataInfo(std::cout);
+	//my_automata2.printAutomataInfo(std::cout);
 
-	/*
+	
 	Automata result;
-	result = my_automata1 * my_automata2;
+	result = my_automata1 + my_automata2;
 	result.printAutomataInfo(std::cout);
-	*/
+	
 
 	std::cin.get();
 

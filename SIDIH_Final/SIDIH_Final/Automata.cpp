@@ -620,7 +620,7 @@ bool Automata::isDFA(std::ostream& console_output) {
 
 	//Search for the epsilon transition
 	if (std::find(events.begin(), events.end(), "") != events.end()) {
-		console_output << "The automata is non-deterministic" << std::endl;
+		console_output << "The automaton is non-deterministic" << std::endl;
 		return false;
 	}
 
@@ -629,14 +629,14 @@ bool Automata::isDFA(std::ostream& console_output) {
 		for (int k = 0; k != events.size(); k++) {
 			if (transitions.count({ i,events.at(k) }) == 1) {
 				if (transitions.at({ i,events.at(k) }).size() > 1) {
-					console_output << "The automata is non-deterministic" << std::endl;
+					console_output << "The automaton is non-deterministic" << std::endl;
 					return false;
 				}
 			}
 		}
 	}
 
-	console_output << "The automata is deterministic" << std::endl;
+	console_output << "The automaton is deterministic" << std::endl;
 	return true;
 }
 
@@ -649,12 +649,17 @@ bool Automata::saveToFile(std::string path, std::ostream& console_output) {
 		return false;
 	}
 
-	std::ofstream file;
+	if (std::ifstream(path))
+	{
+		std::cout << "Error: file already exists" << std::endl;
+		return false;
+	}
 
+	std::ofstream file;
 	file.open(path, std::ios::binary);
 
 	if (!file.is_open()) {
-		console_output << "Couldn't save file to specified path" << std::endl;
+		console_output << "Error: couldn't save file to specified path" << std::endl;
 		return false;
 	}
 

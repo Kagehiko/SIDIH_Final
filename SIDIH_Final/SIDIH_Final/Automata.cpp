@@ -128,7 +128,7 @@ void getSyncProductTransitions(std::vector<std::string> all_events,
 
 
 
-//
+//Same as the sync product. See overloaded operator+ method
 void getAsyncProductTransitions(std::vector<std::string> all_events,
 								std::vector<std::string> A_events,
 								std::vector<std::string> B_events,

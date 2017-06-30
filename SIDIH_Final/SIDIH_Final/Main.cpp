@@ -13,14 +13,16 @@
 #define CLEAR "clear"
 #endif
 
-int genericMenu(std::vector<std::string> options) {
+int genericMenu(std::vector<std::string> options, std::string title) {
 
 	int curr_option = 0;
 
 	system(CLEAR);
 
 	while (true) {
-		std::cout << "FUMAC 2016/2017" << std::endl << "by Jose Silva (1130352) & Daniel Freire (1130858)\n\n\n";
+		std::cout << "SIDIH 2016/2017" << std::endl << "by Jose Silva (1130352) & Daniel Freire (1130858)\n\n\n";
+
+		std::cout << title << "\n\n";
 
 		for (int i = 0; i != options.size(); i++) {
 			std::cout << i + 1 << ") " << options.at(i) << std::endl;
@@ -53,7 +55,7 @@ void automataMenu(std::vector<Automata>& automata_vect, std::vector<std::string>
 	std::vector<std::string> all_options = automata_names;
 	
 	all_options.push_back("Return to main menu");
-	int automaton_index = genericMenu(all_options);
+	int automaton_index = genericMenu(all_options, "Select automaton");
 	
 	while (true) {
 		if (automaton_index == automata_names.size()) {
@@ -61,6 +63,8 @@ void automataMenu(std::vector<Automata>& automata_vect, std::vector<std::string>
 		}
 		else if (automaton_index < automata_names.size()) {
 			auto option = 0;
+			std::string title;
+			title = "Automaton " + automata_names.at(automaton_index);
 			option = genericMenu({"Check automaton type",
 								  "Remove non-accessible states",
 								  "Remove non-coaccessible states",
@@ -73,7 +77,7 @@ void automataMenu(std::vector<Automata>& automata_vect, std::vector<std::string>
 								  "Delete automaton",
 								  "Save automaton to File",
 								  "Return to main menu"
-			});
+			}, title);
 
 			switch (option) {
 				case 0:
@@ -119,7 +123,7 @@ void automataMenu(std::vector<Automata>& automata_vect, std::vector<std::string>
 
 						std::vector<std::string> product_options = automata_names;
 						product_options.push_back("Cancel");
-						int product_automaton_index = genericMenu(product_options);
+						int product_automaton_index = genericMenu(product_options, "Select Automaton to compute product with");
 
 						while (true) {
 							if (product_automaton_index == automata_names.size()) {
@@ -151,16 +155,43 @@ void automataMenu(std::vector<Automata>& automata_vect, std::vector<std::string>
 									std::cout << "Error: product generates an invalid automaton" << std::endl;
 								}
 								else {
+
+									auto it = std::find(automata_names.begin(), automata_names.end(), product_result_name);
+									if (it != automata_names.end()) {
+										auto i = 2;
+										std::string new_name;
+										while (it != automata_names.end()) {
+											new_name = product_result_name + " (" + std::to_string(i) + ")";
+											it = std::find(automata_names.begin(), automata_names.end(), new_name);
+											i++;
+										}
+										product_result_name = new_name;
+									}
+
 									std::string input;
 									std::cout << "Enter automaton name [press enter for default: " << product_result_name << "]:" << std::endl;
 									std::getline(std::cin, input);
 									if (input.empty() == true) {
 										automata_names.push_back(product_result_name);
+										automata_vect.push_back(product_result);
 									}
 									else {
-										automata_names.push_back(input);
+
+										it = std::find(automata_names.begin(), automata_names.end(), input);
+										if (it != automata_names.end()) {
+											std::cout << "Automaton " << input << " already exists. Overwrite? (y/n)" << std::endl;
+											std::string answer;
+											std::cin >> answer;
+											if (answer == "y" || answer == "Y" || answer == "Yes" || answer == "yes") {
+												automata_vect[std::distance(automata_names.begin(), it)] = product_result;
+											}
+										}
+										else {
+											automata_names.push_back(input);
+											automata_vect.push_back(product_result);
+										}
 									}
-									automata_vect.push_back(product_result);
+									
 								}
 								break;
 							}
@@ -180,7 +211,13 @@ void automataMenu(std::vector<Automata>& automata_vect, std::vector<std::string>
 						std::cout << "Enter new automaton name [press enter to keep name]:" << std::endl;
 						std::getline(std::cin, new_name);
 						if (new_name.empty() == false) {
-							automata_names[automaton_index] = new_name;
+							auto it = std::find(automata_names.begin(), automata_names.end(), new_name);
+							if (it != automata_names.end()) {
+								std::cout << "Automaton " << new_name << " already exists." << std::endl;
+							}
+							else {
+								automata_names[automaton_index] = new_name;
+							}
 						}
 						else {
 							break;
@@ -246,7 +283,7 @@ int main() {
 			"Load automaton from file",
 			"Select automata in memory",
 			"Exit"
-		});
+			}, "Main Menu");
 
 		switch (option) {
 
